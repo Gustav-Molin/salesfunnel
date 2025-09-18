@@ -5,37 +5,28 @@
 // ---- Konfiguration ----
 const PDF_URL = "assets/resource.pdf";  // ändra om din pdf heter/ligger annat
 const REDIRECT_AFTER_MS = 400;          // hur snabbt vi går till sida 2 efter nedladdning
-const WEBHOOK_URL = "https://script.google.com/macros/s/AKfycbwvEv6IKMqrqxY4yIXYXcYJ-apUZtxNoXUre9xJ_DwFXRO2MSuAAYfRqQdyhQh40giGdQ/exec"; // t.ex. https://script.google.com/macros/s/.../exec
+const WEBHOOK_URL = "https://script.google.com/macros/s/AKfycbyU4uHrSeaoaI6vWOEAk0uYzVSciVPwiO1zQPWFLlTzlY66NVOHRi-x2YPZLTPBJGbfHQ/exec"; // t.ex. https://script.google.com/macros/s/.../exec
 
-// ---- Hjälpfunktioner ----
 
-// Skicka lead till Google Sheets via Apps Script (form-encoded => ingen CORS-preflight)
 async function saveLead(payload) {
-  if (!WEBHOOK_URL || WEBHOOK_URL.includes("DIN_APPS_SCRIPT_EXEC_URL_HÄR")) {
-    console.warn("WEBHOOK_URL saknas eller är inte uppsatt ännu. Hoppar över saveLead.");
-    return; // gör inget, men låt flödet fortsätta
-  }
+  if (!WEBHOOK_URL) return;
 
-  const params = new URLSearchParams({
-    ...payload,
-    referer: location.href
-  });
+  // Försök med Beacon (triggar inte CORS, funkar även vid redirect)
+  try {
+    if (navigator.sendBeacon) {
+      const data = new URLSearchParams({ ...payload, referer: location.href }).toString();
+      const blob = new Blob([data], { type: "application/x-www-form-urlencoded" });
+      const ok = navigator.sendBeacon(WEBHOOK_URL, blob);
+      if (ok) return; // klart!
+    }
+  } catch (_) {}
 
-  const res = await fetch(WEBHOOK_URL, {
-    method: "POST",
-    body: params
-    // Viktigt: sätt INTE Content-Type manuellt -> 'application/x-www-form-urlencoded' sätts automatiskt
-  });
-
-  // Apps Script svarar JSON { ok: true } vid lyckad loggning
-  const text = await res.text();
-  let json = {};
-  try { json = JSON.parse(text); } catch (_) {}
-
-  if (!res.ok || json.ok !== true) {
-    throw new Error(`Save lead error (status ${res.status}): ${text}`);
-  }
+  // Fallback: FormData + no-cors (vi läser inte svaret – Apps Script tar emot ändå)
+  const fd = new FormData();
+  Object.entries({ ...payload, referer: location.href }).forEach(([k, v]) => fd.append(k, v));
+  await fetch(WEBHOOK_URL, { method: "POST", mode: "no-cors", body: fd });
 }
+
 
 // Hämta och trigga lokal nedladdning av PDF utan att navigera till filen
 async function downloadPdf(url) {
