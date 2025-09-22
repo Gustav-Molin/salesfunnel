@@ -32,6 +32,11 @@
                    pattern="^[0-9+()\\-\\.\\s]{6,}$"
                    title="Ange ett giltigt telefonnummer" />
           </label>
+          <!-- Honeypot (botar fyller ofta i detta) -->
+<div style="position:absolute; left:-9999px; top:auto; width:1px; height:1px; overflow:hidden;">
+  <label>Company (leave empty)</label>
+  <input type="text" name="company" autocomplete="off" tabindex="-1">
+</div>
 
           <button type="submit" id="submitBtn">ladda ner</button>
           <p id="formMsg" aria-live="polite" class="helper"></p>
@@ -51,6 +56,6 @@
     </section>
   </main>
 
-  <script src="script.js?v=5"></script>
+  <script src="script.js?v=6"></script>
 </body>
 </html>
