@@ -80,13 +80,31 @@ function isValidName(s) {
 function isValidEmail(email) {
   if (!email) return false;
   const e = email.trim().toLowerCase();
-  // rimlig e-post-regex
-  const ok = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(e);
-  if (!ok) return false;
-  const domain = e.split("@")[1];
-  if (DISPOSABLE_DOMAINS.has(domain)) return false; // blocka engångsdomäner
+
+  // Bas: enkel e-post-regex
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(e)) return false;
+
+  const [local, domain] = e.split("@");
+  const parts = domain.split(".");
+
+  // NYTT: minst 2 tecken i local-part och i SLD (första domänetiketten)
+  if (local.length < 2) return false;
+  if (parts[0].length < 2) return false; // stoppar w@w.se
+
+  // (valfritt) undvik upprepad enstaka bokstav i local eller SLD, t.ex. a@aaaa.se
+  const rep = /^([a-z0-9])\1+$/;
+  if (rep.test(local) || rep.test(parts[0])) return false;
+
+  const domainLower = domain.toLowerCase();
+  const DISPOSABLE = new Set([
+    "mailinator.com","10minutemail.com","tempmail.com","guerrillamail.com","yopmail.com",
+    "dispostable.com","sharklasers.com","trashmail.com","fakeinbox.com"
+  ]);
+  if (DISPOSABLE.has(domainLower)) return false;
+
   return true;
 }
+
 
 function normalizePhone(raw) {
   const d = raw.replace(/[^\d+]/g, "");
